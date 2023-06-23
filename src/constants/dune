@@ -1,0 +1,6 @@
+(library
+ (name constants)
+ (public_name synth.constants)
+ (synopsis "Constants library")
+ (flags :standard -rectypes -w -27)
+ (libraries coq-core.plugins.ltac termutils typesandeq))

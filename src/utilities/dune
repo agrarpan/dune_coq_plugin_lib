@@ -1,0 +1,6 @@
+(library
+ (name utilities)
+ (public_name synth.utilities)
+ (synopsis "Util library")
+ (flags :standard -rectypes -w -27)
+ (libraries coq-core.plugins.ltac))

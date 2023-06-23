@@ -1,0 +1,6 @@
+(library
+ (name devutils)
+ (public_name synth.devutils)
+ (synopsis "Devutils library")
+ (flags :standard -rectypes -w -27)
+ (libraries coq-core.plugins.ltac utilities contexts))
