@@ -2,7 +2,6 @@ open Util
 open Names
 open Globnames
 open Declarations
-open Indutils
 
 (*
  * Pull any functor parameters off the module signature, returning the list of

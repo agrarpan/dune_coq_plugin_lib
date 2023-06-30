@@ -1,6 +1,0 @@
-(library
- (name decompiler)
- (public_name synth.decompiler)
- (synopsis "Devutils library")
- (flags :standard -rectypes -w -27)
- (libraries coq-core.plugins.ltac utilities constants termutils representationutils contexts))

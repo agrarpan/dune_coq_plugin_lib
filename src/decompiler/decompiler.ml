@@ -4,16 +4,12 @@ open Constr
 open Environ
 open Envutils
 open Pp
-open Constants
-open Indutils
-open Termutils
 open Inference
 open Vars
 open Utilities
-open Zooming
-open Representationutils
+(* open Zooming *)
 open Ltac_plugin
-open Contexts
+open Stateutils
 
 (* Monadic bind on option types. *)
 let (>>=) = Option.bind
@@ -41,14 +37,14 @@ let run_tac env sigma (tac : unit Proofview.tactic) (goal : constr)
   subgoals, sigma
     
 (* Returns true if the given tactic solves the goal. *)
-let solves env sigma (tac : unit Proofview.tactic) (goal : constr) : bool state =
+let solves env sigma (tac : unit Proofview.tactic) (goal : constr) : bool Stateutils.state =
   try
     let subgoals, sigma = run_tac env sigma tac goal in
     sigma, subgoals = []
   with _ -> sigma, false
 
 (* Compute the type of a term if possible, otherwise None. *)
-let type_of env (trm : constr) sigma : (types option) state =
+let type_of env (trm : constr) sigma : (types option) Stateutils.state =
   try
     let sigma, typ = Inference.infer_type env sigma trm in
     sigma, Some typ
@@ -159,7 +155,7 @@ let try_rel (trm : constr) : int option =
 let try_name env (trm : constr) : string option =
   match kind trm with
   | Rel i ->
-     let n = expect_name (fst (rel_name_type (lookup_rel i env))) in
+     let n = Nameutils.expect_name (fst (rel_name_type (lookup_rel i env))) in
      Some (Id.to_string n)
   | Const (c, u) ->
      let ker_name = Constant.canonical c in

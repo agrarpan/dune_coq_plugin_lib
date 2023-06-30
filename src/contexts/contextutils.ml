@@ -8,7 +8,6 @@
 open Constr
 open Names
 open Environ
-open Typesandeq
 open Declarations
 
 module CRD = Context.Rel.Declaration
@@ -199,7 +198,7 @@ let bindings_for_inductive env mutind_body ind_bodies : rel_declaration list =
     (Array.mapi
        (fun i ind_body ->
          let name_id = ind_body.mind_typename in
-         let typ = type_of_inductive env i mutind_body in
+         let typ = Inference.type_of_inductive env i mutind_body in
          CRD.LocalAssum (Name name_id, typ))
        ind_bodies)
 
