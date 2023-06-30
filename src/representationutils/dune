@@ -1,6 +1,0 @@
-(library
- (name representationutils)
- (public_name synth.representationutils)
- (synopsis "Devutils library")
- (flags :standard -rectypes -w -27)
- (libraries coq-core.plugins.ltac))

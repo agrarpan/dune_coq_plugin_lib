@@ -11,7 +11,6 @@ open Constrextern
 open Contextutils
 open Evd
 open Names
-open Representationutils
 open Stateutils
 
 (* Look up all indexes from is in env *)
@@ -90,7 +89,7 @@ let ignore_env (f : 'a -> 'b) : env -> evar_map -> 'a -> 'b =
 let get_pushed_names env : Id.Set.t =
   let names = List.map (fun x -> fst (rel_name_type x))
                 (lookup_all_rels env) in
-  Id.Set.of_list (List.map expect_name names)
+  Id.Set.of_list (List.map Nameutils.expect_name names)
 
 (* If the given name is anonymous, generate a fresh one. *)
 let fresh_name env n =

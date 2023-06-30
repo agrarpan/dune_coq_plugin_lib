@@ -4,7 +4,6 @@
 
 open Constr
 open Names
-open Termutils
 
 let coq_init_logic =
   ModPath.MPfile
