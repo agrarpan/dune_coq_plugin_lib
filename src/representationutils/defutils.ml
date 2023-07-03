@@ -6,7 +6,6 @@ open Constr
 open Names
 open Evd
 open Decls
-open Recordops
 open Constrexpr
 open Constrextern
 
