@@ -48,8 +48,8 @@ let edeclare ident (_, poly, _ as k) ~opaque sigma udecl body tyopt imps hook re
   let body = to_constr sigma body in
   let tyopt = Option.map (to_constr sigma) tyopt in
   let uvars_fold uvars c =
-    Univ.LSet.union uvars (Univops.universes_of_constr c) in
-  let uvars = List.fold_left uvars_fold Univ.LSet.empty
+    Univ.Level.Set.union uvars (EConstr.universes_of_constr sigma c) in
+  let uvars = List.fold_left uvars_fold Univ.Level.Set.empty
     (Option.List.cons tyopt [body]) in
   let sigma = Evd.restrict_universe_context sigma uvars in
   let univs = Evd.check_univ_decl ~poly sigma udecl in
@@ -88,12 +88,12 @@ let intern env sigma t : evar_map * types =
 
 (* Extern a term *)
 let extern env sigma t : constr_expr =
-  Constrextern.extern_constr true env sigma (EConstr.of_constr t)
+  Constrextern.extern_constr env sigma (EConstr.of_constr t)
 
 (* Construct the external expression for a definition *)
 let expr_of_global (g : GlobRef.t) : constr_expr =
   let r = extern_reference Id.Set.empty g in
-  CAst.make @@ (CAppExpl ((None, r, None), []))
+  CAst.make @@ (CAppExpl ((r, None), []))
 
 (* Convert a term into a global reference with universes (or raise Not_found) *)
 let pglobal_of_constr term =
@@ -113,8 +113,4 @@ let constr_of_pglobal (glob, univs) =
   | VarRef id -> mkVar id
 
 (* Safely instantiate a global reference, with proper universe handling *)
-let new_global sigma gref =
-  let sigma_ref = ref sigma in
-  let glob =  Evarutil.e_new_global sigma_ref gref in
-  let sigma = ! sigma_ref in
-  sigma, EConstr.to_constr sigma glob
+let new_global env sigma gref = Evd.fresh_global env sigma gref

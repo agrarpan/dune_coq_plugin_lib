@@ -70,4 +70,4 @@ val constr_of_pglobal : GlobRef.t Univ.puniverses -> constr
 (*
  * Safely instantiate a global reference, updating the evar map
  *)
-val new_global : evar_map -> GlobRef.t -> evar_map * constr
+val new_global : env -> evar_map -> GlobRef.t -> evar_map * constr

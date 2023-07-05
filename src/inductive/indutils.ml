@@ -31,7 +31,7 @@ let check_inductive_supported mutind_body : unit =
 let inductive_of_elim (env : env) (pc : pconstant) : MutInd.t option =
   let (c, u) = pc in
   let kn = Constant.canonical c in
-  let (modpath, dirpath, label) = KerName.repr kn in
+  let (modpath, label) = KerName.repr kn in
   let rec try_find_ind is_rev =
     try
       let label_string = Label.to_string label in
@@ -42,7 +42,7 @@ let inductive_of_elim (env : env) (pc : pconstant) : MutInd.t option =
       if (suffix = "_ind" || suffix = "_rect" || suffix = "_rec" || suffix = "_ind_r") then
         let ind_label_string = String.sub label_string 0 split_index in
         let ind_label = Label.of_id (Id.of_string_soft ind_label_string) in
-        let ind_name = MutInd.make1 (KerName.make modpath dirpath ind_label) in
+        let ind_name = MutInd.make1 (KerName.make modpath ind_label) in
         let _ = lookup_mind ind_name env in
         Some ind_name
       else
@@ -56,7 +56,7 @@ let inductive_of_elim (env : env) (pc : pconstant) : MutInd.t option =
       else
         None
   in try_find_ind false
-                                 
+                   
 (*
  * Get the number of constructors for an inductive type
  *
@@ -78,7 +78,7 @@ let is_elim (env : env) (trm : types) =
 
 (* Lookup the eliminator over the type sort *)
 let type_eliminator (env : env) (ind : inductive) =
-  Universes.constr_of_global (Indrec.lookup_eliminator ind InType)
+  Universes.constr_of_global (Indrec.lookup_eliminator env ind InType)
 
 (* Applications of eliminators *)
 type elim_app =
@@ -160,7 +160,7 @@ let make_ind_local_entry decl =
 (* Instantiate an abstract universe context *)
 let inst_abs_univ_ctx abs_univ_ctx =
   (* Note that we're creating *globally* fresh universe levels. *)
-  Universes.fresh_instance_from_context abs_univ_ctx |> Univ.UContext.make
+  UnivGen.fresh_instance_from abs_univ_ctx |> Univ.UContext.make
 
 (* Instantiate an abstract_inductive_universes into an Entries.inductive_universes with Univ.UContext.t (TODO do we do something with evar_map here?) *)
 let make_ind_univs_entry = function

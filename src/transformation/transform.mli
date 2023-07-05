@@ -8,7 +8,6 @@ open Constr
 open Evd
 open Names
 open Declarations
-open Substitution
 
 (* Type-sensitive transformation of terms *)
 type constr_transformer = env -> evar_map -> constr -> evar_map * constr
