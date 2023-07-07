@@ -7,7 +7,7 @@ open Pp
 open Inference
 open Vars
 open Utilities
-(* open Zooming *)
+open Zooming
 open Ltac_plugin
 open Stateutils
 
@@ -31,11 +31,11 @@ let parse_tac_str (s : string) : unit Proofview.tactic =
 (* Run a coq tactic against a given goal, returning generated subgoals *)
 let run_tac env sigma (tac : unit Proofview.tactic) (goal : constr)
     : Goal.goal list * Evd.evar_map =
-  let p = Proof.start sigma [(env, EConstr.of_constr goal)] in
-  let (p', _) = Proof.run_tactic env tac p in
-  let (subgoals, _, _, _, sigma) = Proof.proof p' in
-  subgoals, sigma
-    
+  let p = Proof.start ~name:(Names.Id.of_string "placeholder") ~poly:true sigma [(env, EConstr.of_constr goal)] in
+  let (p', _, _) = Proof.run_tactic env tac p in
+  let proof_data = Proof.data p' in
+  proof_data.goals, proof_data.sigma
+
 (* Returns true if the given tactic solves the goal. *)
 let solves env sigma (tac : unit Proofview.tactic) (goal : constr) : bool Stateutils.state =
   try
@@ -326,7 +326,7 @@ and try_custom_tacs env sigma get_hints all_opts trm =
     let goal = (Typeops.infer env trm).uj_type  in
     let goal_env env sigma g =
       let typ = EConstr.to_constr sigma (Goal.V82.abstract_type sigma g) in
-      Zooming.zoom_product_type (Environ.reset_context env) typ in
+      zoom_product_type (Environ.reset_context env) typ in
     let rec aux opts =
       match opts with
       | [] -> None
@@ -363,19 +363,19 @@ and try_custom_tacs env sigma get_hints all_opts trm =
 (* Application of a equality eliminator. *)
 and rewrite (f, args) (env, sigma, opts) : tactical option =
   let fx = mkApp (f, args) in
-  dest_rewrite fx >>= fun rewr ->
+  Equtils.dest_rewrite fx >>= fun rewr ->
   let sigma, goal = type_of env fx sigma in
   dot (Rewrite (env, rewr.eq, rewr.left, goal)) (first_pass env sigma opts rewr.px)
 
 (* Applying an eliminator for induction on a hypothesis in context. *)
 and induction (f, args) (env, sigma, opts) : tactical option =
-  guard (is_elim env f) >>= fun _ ->
-  guard (not (is_rewrite f)) >>= fun _ ->
+  guard (Indutils.is_elim env f) >>= fun _ ->
+  guard (not (Equtils.is_rewrite f)) >>= fun _ ->
   let app = mkApp (f, args) in
-  let sigma, ind = deconstruct_eliminator env sigma app in
-  inductive_of_elim env (destConst f) >>= fun from_i ->
+  let sigma, ind = Indutils.deconstruct_eliminator env sigma app in
+  Indutils.inductive_of_elim env (destConst f) >>= fun from_i ->
   let from_m = lookup_mind from_i env in
-  let ari = arity (type_of_inductive env 0 from_m) in
+  let ari = Funutils.arity (type_of_inductive env 0 from_m) in
   let ind_pos = ari - List.length ind.pms in
   if ind_pos >= List.length ind.final_args
   then
@@ -385,10 +385,10 @@ and induction (f, args) (env, sigma, opts) : tactical option =
   else 
     let ind_var = List.nth ind.final_args ind_pos in
     let forget  = List.length ind.final_args - ind_pos - 1 in
-    let zoom_but = arity ind.p - 1 in
+    let zoom_but = Funutils.arity ind.p - 1 in
     (* Take final args after inducted value, and revert them. *)
     let rev_idx = filter_map try_rel (take forget (List.rev ind.final_args)) in
-    let idx_to_name i = expect_name (fst (rel_name_type (lookup_rel i env))) in
+    let idx_to_name i = Nameutils.expect_name (fst (rel_name_type (lookup_rel i env))) in
     let reverts = List.map idx_to_name rev_idx in
     (* Compute bindings and goals for each case. *)
     let zooms = List.map (zoom_lambda_names env zoom_but) ind.cs in
@@ -399,30 +399,30 @@ and induction (f, args) (env, sigma, opts) : tactical option =
     
 (* Choose left proof to construct or. *)
 and left (f, args) (env, sigma, opts) : tactical option =
-  dest_or_introl (mkApp (f, args)) >>= fun args ->
+  Proputils.dest_or_introl (mkApp (f, args)) >>= fun args ->
   dot (Left) (first_pass env sigma opts args.ltrm)
 
 (* Choose right proof to construct or. *)
 and right (f, args) (env, sigma, opts) : tactical option =
-  dest_or_intror (mkApp (f, args)) >>= fun args ->
+  Proputils.dest_or_intror (mkApp (f, args)) >>= fun args ->
   dot (Right) (first_pass env sigma opts args.rtrm)
 
 (* Branch two goals as arguments to conj. *)
 and split (f, args) (env, sigma, opts) : tactical option =
-  dest_conj (mkApp (f, args)) >>= fun args ->
+  Proputils.dest_conj (mkApp (f, args)) >>= fun args ->
   let lhs = first_pass env sigma opts args.ltrm in
   let rhs = first_pass env sigma opts args.rtrm in
   Some (Compose ([ Split ], [ lhs ; rhs ]))
 
 (* Converts "apply eq_refl." into "reflexivity." *)
 and reflexivity (f, args) _ : tactical option =
-  dest_eq_refl_opt (mkApp (f, args)) >>= fun _ ->
+  Equtils.dest_eq_refl_opt (mkApp (f, args)) >>= fun _ ->
   qed Reflexivity
   
 (* Transform x = y to y = x. *)
 and symmetry (f, args) (env, sigma, opts) : tactical option =
-  guard (equal f eq_sym) >>= fun _ ->
-  let sym = dest_eq_sym (mkApp (f, args)) in
+  guard (equal f Equtils.eq_sym) >>= fun _ ->
+  let sym = Equtils.dest_eq_sym (mkApp (f, args)) in
   dot (Symmetry) (first_pass env sigma opts sym.eq_proof)
 
 (* Provide evidence for dependent pair.  *)
@@ -435,7 +435,7 @@ and exists (f, args) (env, sigma, opts) : tactical option =
 and rewrite_in (_, valu, _, body) (env, sigma, opts) : tactical option =
   let valu = Reduction.whd_betaiota env valu in
   try_app valu                   >>= fun (f, args) ->
-  dest_rewrite (mkApp (f, args)) >>= fun rewr -> 
+  Equtils.dest_rewrite (mkApp (f, args)) >>= fun rewr -> 
   try_rel rewr.px                >>= fun idx ->
   guard (noccurn (idx + 1) body) >>= fun _ ->
   let n, t = rel_name_type (lookup_rel idx env) in
@@ -471,7 +471,7 @@ and apply_in (n, valu, typ, body) (env, sigma, opts) : tactical option =
     
 (* Last resort decompile let-in as a pose.  *)
 and pose (n, valu, t, body) (env, sigma, opts) : tactical option =
-  let n' = fresh_name env n in
+  let n' = fresh_name env (Context.binder_name n) in
   let env' = push_let_in (Name n', valu, t) env in
   let decomp_body = first_pass env' sigma opts body in
   (* If the binding is NEVER used, just skip this. *)
