@@ -32,8 +32,8 @@ let lookup_all_rels (env : env) : rel_declaration list =
 (* Return a name-type pair from the given rel_declaration. *)
 let rel_name_type rel : Name.t * types =
   match rel with
-  | CRD.LocalAssum (n, t) -> (n, t)
-  | CRD.LocalDef (n, _, t) -> (n, t)
+  | CRD.LocalAssum (n, t) -> ((Context.binder_name n), t)
+  | CRD.LocalDef (n, _, t) -> ((Context.binder_name n), t)
 
 
 (* Push a local binding to an environment *)
@@ -54,8 +54,7 @@ let force_constant_body const_body =
   | OpaqueDef opaq ->
     Opaqueproof.force_proof (Global.opaque_tables ()) opaq
   | _ ->
-    CErrors.user_err ~hdr:"force_constant_body"
-      (Pp.str "An axiom has no defining term")
+    CErrors.user_err (Pp.str "An axiom has no defining term")
 
 (* Lookup a definition *)
 let lookup_definition (env : env) (def : types) : types =

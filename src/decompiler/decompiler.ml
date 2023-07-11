@@ -243,9 +243,9 @@ let rec rewrite_implicit sigma (t : tactical) : tactical =
            let r2 = Rewrite (env, f, dir, Some goal) in
            let goals1, sigma = run_tac env sigma (coq_tac sigma r1 "") goal in
            let goals2, sigma = run_tac env sigma (coq_tac sigma r2 "") goal in
-           let goals1 = List.map (Goal.V82.abstract_type sigma) goals1 in
-           let goals2 = List.map (Goal.V82.abstract_type sigma) goals2 in
-           let choice = if list_eq (EConstr.eq_constr sigma) goals1 goals2
+           (* let goals1 = List.map (Goal.V82.abstract_type sigma) goals1 in
+           let goals2 = List.map (Goal.V82.abstract_type sigma) goals2 in *)
+           let choice = if list_eq (Evar.equal) goals1 goals2
                         then r2 else r1 in 
            Compose ( [ choice ], rest )
         | _ -> Compose ( [ r1 ], rest ))

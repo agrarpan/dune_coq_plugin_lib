@@ -78,7 +78,7 @@ let is_elim (env : env) (trm : types) =
 
 (* Lookup the eliminator over the type sort *)
 let type_eliminator (env : env) (ind : inductive) =
-  Universes.constr_of_global (Indrec.lookup_eliminator env ind InType)
+  UnivGen.constr_of_monomorphic_global env (Indrec.lookup_eliminator env ind InType)
 
 (* Applications of eliminators *)
 type elim_app =
@@ -125,9 +125,9 @@ let rec num_ihs env sigma rec_typ typ =
      let t_red = reduce_stateless reduce_term env sigma t in
      if is_or_applies rec_typ t_red then
        let (n_b_t, b_t, b_b) = destProd b in
-       1 + num_ihs (push_local (n, t) (push_local (n_b_t, b_t) env)) sigma rec_typ b_b
+       1 + num_ihs (push_local (Context.binder_name n, t) (push_local (Context.binder_name n_b_t, b_t) env)) sigma rec_typ b_b
      else
-       num_ihs (push_local (n, t) env) sigma rec_typ b
+       num_ihs (push_local (Context.binder_name n, t) env) sigma rec_typ b
   | _ ->
      0
 
@@ -142,7 +142,7 @@ let arity_of_ind_body ind_body =
   match ind_body.mind_arity with
   | RegularArity { mind_user_arity; mind_sort } ->
     mind_user_arity
-  | TemplateArity { template_param_levels; template_level } ->
+  | TemplateArity {template_level} ->
     let sort = Constr.mkType template_level in
     recompose_prod_assum ind_body.mind_arity_ctxt sort
 
@@ -182,9 +182,9 @@ let open_inductive ?(global=false) env (mind_body, ind_body) =
   let subst_univs = Vars.subst_instance_constr (Univ.UContext.instance univ_ctx) in
   let env = Environ.push_context univ_ctx env in
   if global then
-    Global.push_context false univ_ctx;
+    Global.push_context_set ~strict:false univ_ctx;
   let arity = arity_of_ind_body ind_body in
-  let arity_ctx = [CRD.LocalAssum (Name.Anonymous, arity)] in
+  let arity_ctx = [CRD.LocalAssum (Context.annotR Name.Anonymous, arity)] in
   let ctors_typ = Array.map (recompose_prod_assum arity_ctx) ind_body.mind_user_lc in
   env, univs, subst_univs arity, Array.map_to_list subst_univs ctors_typ
 
