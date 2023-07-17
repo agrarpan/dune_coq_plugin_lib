@@ -172,6 +172,25 @@ let dot tac next = Some (Compose ([ tac ], [ next ]))
 (* Single tactic to finish proof. *)
 let qed tac = Some (Compose ([ tac ], []))
 
+let concl evars gl =
+  let evi = Evd.find evars gl in
+  evi.Evd.evar_concl
+
+let abstract_type sigma gl =
+  let open EConstr in
+  let genv = Global.env () in
+  let env = Evd.evar_filtered_env genv (Evd.find sigma gl) in
+  let is_proof_var decl =
+    try ignore (Environ.lookup_named (Context.Named.Declaration.get_id decl) genv); false
+    with Not_found -> true in
+  Environ.fold_named_context_reverse (fun t decl ->
+                                        if is_proof_var decl then
+                                          let decl = Termops.map_named_decl EConstr.of_constr decl in
+                                          mkNamedProd_or_LetIn decl t
+                                        else
+                                          t
+                                      ) ~init:(concl sigma gl) env
+
 (* Inserts "simpl." before every rewrite. *)
 let rec simpl sigma (t : tactical) : tactical =
     match t with
@@ -325,7 +344,7 @@ and try_custom_tacs env sigma get_hints all_opts trm =
   try
     let goal = (Typeops.infer env trm).uj_type  in
     let goal_env env sigma g =
-      let typ = EConstr.to_constr sigma (Goal.V82.abstract_type sigma g) in
+      let typ = EConstr.to_constr sigma (abstract_type sigma g) in
       zoom_product_type (Environ.reset_context env) typ in
     let rec aux opts =
       match opts with

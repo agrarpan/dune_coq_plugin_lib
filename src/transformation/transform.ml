@@ -14,7 +14,7 @@ open Defutils
 open Indutils
 open Substitution
 open Stateutils
-open Recordops
+open Record
 
 (* Type-sensitive transformation of terms *)
 type constr_transformer = env -> evar_map -> constr -> evar_map * constr
@@ -23,14 +23,14 @@ type constr_transformer = env -> evar_map -> constr -> evar_map * constr
  * Force a constant_body into the internal representation
  * Fail with an error if the supplied constant_body is an axiom
  *)
-let force_constant_body const_body =
+let force_constant_body accessor const_body =
   match const_body.const_body with
   | Def const_def ->
-    Mod_subst.force_constr const_def
+    const_def
   | OpaqueDef opaq ->
-    Opaqueproof.force_proof (Global.opaque_tables ()) opaq
+    let (types, _) = Global.force_proof accessor opaq in types
   | _ ->
-    CErrors.user_err ~hdr:"force_constant_body"
+    CErrors.user_err
       (Pp.str "An axiom has no defining term")
 
 (*
@@ -40,7 +40,7 @@ let force_constant_body const_body =
  * NOTE: Global side effects.
  * TODO is this the right way to deal w/ env and sigma? in this whole file
  *)
-let transform_constant ident tr_constr const_body =
+let transform_constant accessor ident tr_constr const_body =
   let env =
     match const_body.const_universes with
     | Monomorphic_const univs ->
@@ -49,7 +49,7 @@ let transform_constant ident tr_constr const_body =
       CErrors.user_err ~hdr:"transform_constant"
         Pp.(str "Universe polymorphism is not supported")
   in
-  let term = force_constant_body const_body in
+  let term = force_constant_body accessor const_body in
   let sigma = Evd.from_env env in
   let sigma, term' = tr_constr env sigma term in
   let sigma, type' = tr_constr env sigma const_body.const_type in

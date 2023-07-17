@@ -47,30 +47,30 @@ let lookup_pop (n : int) (env : env) =
   let rels = List.map (fun i -> lookup_rel i env) (from_one_to n) in
   (pop_rel_context n env, rels)
 
-let force_constant_body const_body =
+let force_constant_body accessor const_body =
   match const_body.const_body with
   | Def const_def ->
-    Mod_subst.force_constr const_def
+    const_def
   | OpaqueDef opaq ->
-    Opaqueproof.force_proof (Global.opaque_tables ()) opaq
+    let (types, _) = Global.force_proof accessor opaq in types
   | _ ->
     CErrors.user_err (Pp.str "An axiom has no defining term")
 
 (* Lookup a definition *)
-let lookup_definition (env : env) (def : types) : types =
+let lookup_definition (env : env) (def : types) (accessor: Global.indirect_accessor): types =
   match kind def with
-  | Const (c, u) -> force_constant_body (lookup_constant c env)
+  | Const (c, u) -> force_constant_body accessor (lookup_constant c env)
   | Ind _ -> def
   | _ -> failwith "not a definition"
 
 (* Fully lookup a def in env, but return the term if it is not a definition *)
-let rec unwrap_definition (env : env) (trm : types) : types =
+let rec unwrap_definition (env : env) (trm : types) (accessor: Global.indirect_accessor): types =
   try
-    let body = lookup_definition env trm in
+    let body = lookup_definition env trm accessor in
     if equal body trm then
       trm
     else
-      unwrap_definition env body
+      unwrap_definition env body accessor
   with _ ->
     trm
 

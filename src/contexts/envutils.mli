@@ -34,8 +34,8 @@ val push_let_in : (Name.t * types * types) -> env -> env
  * Lookup from an environment
  *)
 val lookup_pop : int -> env -> (env * rel_declaration list)
-val lookup_definition : env -> types -> types
-val unwrap_definition : env -> types -> types
+val lookup_definition : env -> types -> Global.indirect_accessor -> types
+val unwrap_definition : env -> types -> Global.indirect_accessor -> types
 
 (*
  * Offset between an environment and an index, or two environments, respectively
