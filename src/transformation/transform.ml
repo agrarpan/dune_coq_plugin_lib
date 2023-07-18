@@ -14,7 +14,6 @@ open Defutils
 open Indutils
 open Substitution
 open Stateutils
-open Record
 
 (* Type-sensitive transformation of terms *)
 type constr_transformer = env -> evar_map -> constr -> evar_map * constr
@@ -41,13 +40,7 @@ let force_constant_body accessor const_body =
  * TODO is this the right way to deal w/ env and sigma? in this whole file
  *)
 let transform_constant accessor ident tr_constr const_body =
-  let env =
-    match const_body.const_universes with
-    | Monomorphic_const univs ->
-      Global.env () |> Environ.push_context_set univs
-    | Polymorphic_const univs ->
-      CErrors.user_err ~hdr:"transform_constant"
-        Pp.(str "Universe polymorphism is not supported")
+  let env = Global.env ()
   in
   let term = force_constant_body accessor const_body in
   let sigma = Evd.from_env env in
@@ -87,16 +80,10 @@ let transform_inductive ident tr_constr (mind_body, ind_body as ind_specif) =
  *)
 let try_register_record mod_path (ind, ind') =
   try
-    let r = lookup_structure ind in
+    let r = Structures.Structure.find ind in
     Feedback.msg_info (Pp.str "Transformed a record");
-    let pks = r.s_PROJKIND in
-    let ps =
-      List.map
-        (Option.map (fun p -> Constant.make2 mod_path (Constant.label p)))
-        r.s_PROJ
-    in
     (try
-       declare_structure (ind', (ind', 1), pks, ps)
+       Structures.Structure.register r
      with _ ->
        Feedback.msg_warning
          (Pp.str "Failed to register projections for transformed record"))
@@ -117,8 +104,7 @@ let try_register_record mod_path (ind, ind') =
  *
  * TODO sigma handling, not sure how to do it here/if we need it
  *)
-let transform_module_structure ?(init=const Globnames.Refmap.empty) ?(opaques=Globnames.Refset.empty) ident tr_constr mod_body =
-  let open Modutils in
+let transform_module_structure ?(init=const GlobRef.Map.empty) ?(opaques=GlobRef.Set.empty) ident tr_constr mod_body =
   let mod_path = mod_body.mod_mp in
   let mod_arity, mod_elems = decompose_module_signature mod_body.mod_type in
   let mod_elems =
@@ -127,7 +113,7 @@ let transform_module_structure ?(init=const Globnames.Refmap.empty) ?(opaques=Gl
         match b with
         | SFBconst const_body ->
            let const = Constant.make2 mod_path l in
-           not (Globnames.Refset.mem (ConstRef const) opaques)
+           not (GlobRef.Set.mem (ConstRef const) opaques)
         | _ ->
            true)
       mod_elems
@@ -141,11 +127,11 @@ let transform_module_structure ?(init=const Globnames.Refmap.empty) ?(opaques=Gl
     match body with
     | SFBconst const_body ->
       let const = Constant.make2 mod_path label in
-      if Globnames.Refmap.mem (ConstRef const) subst then
+      if GlobRef.Map.mem (ConstRef const) subst then
         subst (* Do not transform schematic definitions. *)
       else
         let sigma, const' = transform_constant ident tr_constr const_body in
-        Globnames.Refmap.add (ConstRef const) (ConstRef const') subst
+        GlobRef.Map.add (ConstRef const) (ConstRef const') subst
     | SFBmind mind_body ->
       check_inductive_supported mind_body;
       let ind = (MutInd.make2 mod_path label, 0) in
@@ -156,7 +142,7 @@ let transform_module_structure ?(init=const Globnames.Refmap.empty) ?(opaques=Gl
       let list_cons ind = List.init ncons (fun i -> ConstructRef (ind, i + 1)) in
       let sorts = ind_body.mind_kelim in
       let list_elim ind = List.map (Indrec.lookup_eliminator ind) sorts in
-      Globnames.Refmap.add (IndRef ind) (IndRef ind') subst |>
+      GlobRef.Refmap.add (IndRef ind) (IndRef ind') subst |>
       List.fold_right2 Globnames.Refmap.add (list_cons ind) (list_cons ind') |>
       List.fold_right2 Globnames.Refmap.add (list_elim ind) (list_elim ind')
     | SFBmodule mod_body ->

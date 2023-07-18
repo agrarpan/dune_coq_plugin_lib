@@ -22,4 +22,4 @@ val make_constant: Id.t -> types
  *
  * Raises a Match_failure if the constant does not exist.
  *)
-val open_constant : env -> Constant.t -> env * constr
+val open_constant : Global.indirect_accessor -> env -> Constant.t -> env * constr
