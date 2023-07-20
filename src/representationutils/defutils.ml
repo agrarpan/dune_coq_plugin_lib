@@ -55,7 +55,7 @@ let edeclare ident (_, poly, _ as k) ~opaque sigma udecl body tyopt imps hook re
   let univs = Evd.check_univ_decl ~poly sigma udecl in
   let ubinders = Evd.universe_binders sigma in
   let ce = Declare.definition_entry ?types:tyopt ~univs body in
-  DeclareDef.declare_definition ident k ce ubinders imps hook
+  Declare.declare_definition ident k ce ubinders imps hook
 
 (* Define a new Coq term *)
 let define_term ?typ (n : Id.t) (evm : evar_map) (trm : types) (refresh : bool) =

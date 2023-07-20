@@ -150,8 +150,8 @@ let arity_of_ind_body ind_body =
 let make_ind_local_entry decl =
   let entry =
     match decl with
-    | CRD.LocalAssum (_, typ) -> Entries.LocalAssumEntry typ
-    | CRD.LocalDef (_, term, _) -> Entries.LocalDefEntry term
+    | CRD.LocalAssum (_, typ) -> Entries.LocalAssum typ
+    | CRD.LocalDef (_, term, _) -> Entries.LocalDef term
   in
   match CRD.get_name decl with
   | Name.Name id -> (id, entry)

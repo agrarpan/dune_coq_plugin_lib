@@ -104,7 +104,7 @@ let try_register_record mod_path (ind, ind') =
  *
  * TODO sigma handling, not sure how to do it here/if we need it
  *)
-let transform_module_structure ?(init=const GlobRef.Map.empty) ?(opaques=GlobRef.Set.empty) ident tr_constr mod_body =
+let transform_module_structure accessor ?(init=const GlobRef.Map.empty) ?(opaques=GlobRef.Set.empty) ident tr_constr mod_body =
   let mod_path = mod_body.mod_mp in
   let mod_arity, mod_elems = decompose_module_signature mod_body.mod_type in
   let mod_elems =
@@ -130,7 +130,7 @@ let transform_module_structure ?(init=const GlobRef.Map.empty) ?(opaques=GlobRef
       if GlobRef.Map.mem (ConstRef const) subst then
         subst (* Do not transform schematic definitions. *)
       else
-        let sigma, const' = transform_constant ident tr_constr const_body in
+        let sigma, const' = transform_constant accessor ident tr_constr const_body in
         GlobRef.Map.add (ConstRef const) (ConstRef const') subst
     | SFBmind mind_body ->
       check_inductive_supported mind_body;

@@ -43,5 +43,5 @@ val transform_inductive :
  * NOTE: Does not support functors or nested modules.
  * NOTE: Global side effects.
  *)
-val transform_module_structure :
+val transform_module_structure : Global.indirect_accessor ->
   ?init:(unit -> Substitution.global_substitution) -> ?opaques:(GlobRef.Set.t) -> Id.t -> constr_transformer -> module_body -> ModPath.t
